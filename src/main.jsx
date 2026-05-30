@@ -12,7 +12,6 @@ import {
   Coins,
   Database,
   GitFork,
-  Github,
   Globe2,
   GraduationCap,
   Layers3,
@@ -67,7 +66,7 @@ const sideItems = [
   { key: 'home', label: 'Home', icon: GraduationCap },
   { key: 'market', label: 'Market API', icon: Coins },
   { key: 'defi', label: 'DeFi TVL', icon: Database },
-  { key: 'repo', label: 'Repo Health', icon: Github },
+  { key: 'repo', label: 'Repo Health', icon: GitFork },
   { key: 'news', label: 'Signals', icon: Bell },
   { key: 'tasks', label: 'Build Tasks', icon: CheckCircle2 },
   { key: 'docs', label: 'Docs', icon: BookOpen },
@@ -85,7 +84,7 @@ const tasks = [
 const modules = [
   { name: 'Market Intelligence', icon: Coins, color: 'purple', progress: 94, note: 'CoinGecko + Binance fallback' },
   { name: 'DeFi Protocol Radar', icon: Database, color: 'green', progress: 88, note: 'DefiLlama public API' },
-  { name: 'Repo Health Monitor', icon: Github, color: 'blue', progress: 82, note: 'GitHub REST API' },
+  { name: 'Repo Health Monitor', icon: GitFork, color: 'blue', progress: 82, note: 'GitHub REST API' },
   { name: 'News Signal Layer', icon: Bell, color: 'orange', progress: 76, note: 'CryptoCompare + trend fallback' },
   { name: 'Builder AI Coach', icon: Bot, color: 'teal', progress: 69, note: 'Rule-based guidance' }
 ];
@@ -177,7 +176,7 @@ function RepoPanel({ rows }) {
       <div className="repoGrid">
         {rows.map((row) => (
           <a className="repoCard" href={row.url} target="_blank" rel="noreferrer" key={row.name}>
-            <Github size={18} />
+            <GitFork size={18} />
             <b>{row.name}</b>
             <div><span><Star size={14} /> {row.stars}</span><span><GitFork size={14} /> {row.forks}</span></div>
             <small>{row.language} • score {row.score}</small>
@@ -226,7 +225,7 @@ function QuickActions({ refresh, loading }) {
       <div className="quickGrid">
         <button onClick={refresh}><Activity /> {loading ? 'Refreshing...' : 'Refresh APIs'}</button>
         <button onClick={() => navigator.clipboard?.writeText(window.location.href)}><Link2 /> Copy demo link</button>
-        <button onClick={() => window.open('https://github.com', '_blank')}><Github /> Open GitHub</button>
+        <button onClick={() => window.open('https://github.com', '_blank')}><GitFork /> Open GitHub</button>
         <button onClick={() => alert('Pitch checklist: problem, solution, API usage, demo, next steps.')}><Rocket /> Pitch checklist</button>
       </div>
     </section>
@@ -309,7 +308,7 @@ function App() {
         <section className="statsGrid">
           <StatCard icon={Coins} label="24h Tracked Volume" value={fmtUsd(stats.volume)} hint={sources.market || 'Market API'} tone="purple" />
           <StatCard icon={Database} label="DeFi TVL Watch" value={fmtUsd(stats.tvl)} hint={sources.defi || 'Protocol API'} tone="green" />
-          <StatCard icon={Github} label="Repo Health Score" value={stats.repoScore || '—'} hint={sources.github || 'GitHub API'} tone="blue" />
+          <StatCard icon={GitFork} label="Repo Health Score" value={stats.repoScore || '—'} hint={sources.github || 'GitHub API'} tone="blue" />
           <StatCard icon={LineChart} label="Market Pulse" value={fmtPct(stats.avgMove)} hint="Average 24h move" tone="orange" />
           <StatCard icon={WalletCards} label="SoDEX Layer" value={sodex?.configured ? 'Connected' : 'Ready'} hint={sodex?.message || 'Trading API route'} tone="teal" />
         </section>
