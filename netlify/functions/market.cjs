@@ -1,9 +1,8 @@
-const fallback = [
-  { symbol:'SOL', name:'Solana', price:156.82, change:7.24, volume:3.12e9, marketCap:72.3e9, color:'#7c3aed' },
-  { symbol:'ETH', name:'Ethereum', price:3472.56, change:4.13, volume:18.45e9, marketCap:417.2e9, color:'#6474ff' },
-  { symbol:'ARB', name:'Arbitrum', price:1.164, change:6.87, volume:1.28e9, marketCap:4.6e9, color:'#2d9cdb' },
-  { symbol:'LINK', name:'Chainlink', price:16.42, change:5.45, volume:842.31e6, marketCap:9.7e9, color:'#2563eb' },
-  { symbol:'UNI', name:'Uniswap', price:9.18, change:3.92, volume:556.22e6, marketCap:5.4e9, color:'#ff4db8' },
-  { symbol:'BTC', name:'Bitcoin', price:67420.12, change:2.31, volume:34.21e9, marketCap:1.33e12, color:'#f59e0b' }
-];
-exports.handler = async()=>{try{const ids='bitcoin,ethereum,solana,arbitrum,chainlink,uniswap';const r=await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h`);const d=await r.json();if(Array.isArray(d)&&d.length){return {statusCode:200,body:JSON.stringify({data:d.map(x=>({symbol:String(x.symbol).toUpperCase(),name:x.name,price:x.current_price,change:x.price_change_percentage_24h,volume:x.total_volume,marketCap:x.market_cap,color:'#2563ff'}))})}}}catch(e){}return {statusCode:200,body:JSON.stringify({data:fallback})}}
+const { ok, getJson, normMarket, fallbackMarket } = require('./_common.cjs');
+exports.handler = async function(){
+ const key=process.env.SOSOVALUE_API_KEY; const base=(process.env.SOSOVALUE_BASE_URL||'https://openapi.sosovalue.com/openapi/v1').replace(/\/+$/,''); const path=process.env.SOSOVALUE_MARKET_PATH||'/token/market/list';
+ if(key){try{const d=await getJson(`${base}${path}`,{headers:{'x-soso-api-key':key,'X-SOSO-API-KEY':key}}); const arr=d?.data?.list||d?.data?.data||d?.data||d?.list||[]; if(Array.isArray(arr)&&arr.length)return ok({source:'primary',data:normMarket(arr)});}catch(e){}}
+ try{const cg=await getJson('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin,ripple,chainlink,arbitrum,uniswap&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h');return ok({source:'market',data:normMarket(cg)});}catch(e){}
+ try{const s=encodeURIComponent(JSON.stringify(['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','LINKUSDT']));const b=await getJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${s}`);return ok({source:'exchange',data:normMarket(b)});}catch(e){}
+ return ok({source:'resilience',data:fallbackMarket});
+}
