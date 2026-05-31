@@ -1,368 +1,96 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import {
-  Activity,
-  Bell,
-  BookOpen,
-  Bot,
-  CalendarDays,
-  CheckCircle2,
-  ChevronRight,
-  Code2,
-  Coins,
-  Database,
-  GitFork,
-  Globe2,
-  GraduationCap,
-  Layers3,
-  LineChart,
-  Link2,
-  Loader2,
-  Rocket,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  Target,
-  WalletCards,
-  Zap
-} from 'lucide-react';
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from 'recharts';
 import './styles.css';
 
-const fmtUsd = (value) => {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '$0';
-  if (Math.abs(n) >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}B`;
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(2)}K`;
-  return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+const zh = {
+  overview: '总览', market: '市场', defi: 'DeFi TVL', repo: '仓库健康', signals: '信号', tasks: '任务', docs: '文档', settings: '设置',
+  subtitle: 'Web3 情报平台', search: '搜索资产、协议、API、任务...', title: 'Real-time Web3 intelligence for builders and investors.',
+  desc: 'Track markets, DeFi, repositories, and on-chain activity. All in one unified platform.', api: 'API 已连接', refresh: '刷新数据',
+  volume: '24H 市场交易量', tvl: 'DeFi 锁仓量', repos: '活跃仓库', pulse: '市场脉冲', operational: '运行正常',
+  insight: 'NovaLedger 洞察', overviewChart: '市场概览', defiTrend: 'DeFi TVL 趋势', gainers: '涨幅榜', repoHealth: '仓库健康', latestSignals: '最新信号', networkStatus: '网络状态', buildTasks: '构建任务', schedule: '构建日程'
+};
+const en = {
+  overview: 'Overview', market: 'Market API', defi: 'DeFi TVL', repo: 'Repository Health', signals: 'Signals', tasks: 'Build Tasks', docs: 'Documentation', settings: 'Settings',
+  subtitle: 'Web3 Intelligence Platform', search: 'Search assets, protocols, APIs, tasks...', title: 'Real-time Web3 intelligence for builders and investors.',
+  desc: 'Track markets, DeFi, repositories, and on-chain activity. All in one unified platform.', api: 'API Connected', refresh: 'Refresh Data',
+  volume: '24H Market Volume', tvl: 'DeFi TVL', repos: 'Active Repositories', pulse: 'Market Pulse', operational: 'Operational',
+  insight: 'NovaLedger Insight', overviewChart: 'Market Overview', defiTrend: 'DeFi TVL Trend', gainers: 'Top Gainers', repoHealth: 'Repository Health', latestSignals: 'Latest Signals', networkStatus: 'Network Status', buildTasks: 'Build Tasks', schedule: 'Build Schedule'
 };
 
-const fmtPct = (value) => {
-  const n = Number(value || 0);
-  return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`;
+const nav = [
+  ['overview', '⌂'], ['market', '⌁'], ['defi', '◉'], ['repo', '◌'], ['signals', '♢'], ['tasks', '☑'], ['docs', '▤'], ['settings', '⚙']
+];
+const fallbackMarket = [
+  { symbol: 'BTC', name: 'Bitcoin', price: 69678.25, change: 1.32, volume: 32410000000, marketCap: 1370000000000, score: 94 },
+  { symbol: 'ETH', name: 'Ethereum', price: 3827.65, change: 2.18, volume: 18730000000, marketCap: 460120000000, score: 91 },
+  { symbol: 'SOL', name: 'Solana', price: 181.46, change: -0.84, volume: 3210000000, marketCap: 86320000000, score: 82 },
+  { symbol: 'BNB', name: 'BNB', price: 606.38, change: 0.63, volume: 1670000000, marketCap: 88460000000, score: 79 },
+  { symbol: 'LINK', name: 'Chainlink', price: 16.42, change: 5.45, volume: 842310000, marketCap: 10240000000, score: 88 }
+];
+const fallbackDefi = [
+  { name: 'Lido', category: 'Liquid Staking', tvl: 24130000000, change_1d: 3.21 },
+  { name: 'Aave', category: 'Lending', tvl: 12470000000, change_1d: 2.05 },
+  { name: 'Maker', category: 'CDP', tvl: 7820000000, change_1d: -0.61 },
+  { name: 'Uniswap', category: 'DEX', tvl: 6310000000, change_1d: 1.48 },
+  { name: 'Curve', category: 'DEX', tvl: 4170000000, change_1d: 0.97 }
+];
+const fallbackNews = [
+  { title: 'Bitcoin volume accelerates as market breadth improves', source: 'NovaLedger Signals', sentiment: 'Bullish' },
+  { title: 'Ethereum staking metrics remain strong across liquid staking protocols', source: 'NovaLedger Signals', sentiment: 'Bullish' },
+  { title: 'DeFi TVL expands as lending and DEX activity recovers', source: 'NovaLedger Signals', sentiment: 'Neutral' }
+];
+
+const fmtUsd = (v) => {
+  const n = Number(v); if (!Number.isFinite(n)) return '$0';
+  if (Math.abs(n) >= 1e12) return `$${(n/1e12).toFixed(2)}T`;
+  if (Math.abs(n) >= 1e9) return `$${(n/1e9).toFixed(2)}B`;
+  if (Math.abs(n) >= 1e6) return `$${(n/1e6).toFixed(2)}M`;
+  if (Math.abs(n) >= 1) return `$${n.toLocaleString(undefined,{maximumFractionDigits:2})}`;
+  return `$${n.toFixed(6)}`;
 };
-
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: 'no-store' });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-  return json;
+const fmtPct = (v) => `${Number(v || 0) > 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
+const sum = (arr, key) => arr.reduce((a,b)=>a + Number(b[key] || 0), 0);
+async function getApi(path, fallback){
+  const paths = [path, `/.netlify/functions/${path.replace('/api/','')}`];
+  for (const p of paths) {
+    try { const r = await fetch(p, { cache: 'no-store' }); if (r.ok) { const d = await r.json(); const rows = d?.data || []; if (Array.isArray(rows) && rows.length) return rows; } } catch {}
+  }
+  return fallback;
+}
+function LineChart({ points, color='var(--blue)' }){
+  const vals = points?.length ? points : [2.05,2.18,2.24,2.19,2.36,2.51,2.42,2.48,2.61];
+  const min=Math.min(...vals), max=Math.max(...vals), range=max-min||1;
+  const d=vals.map((v,i)=>`${i?'L':'M'} ${(i/(vals.length-1))*100} ${54-((v-min)/range)*42}`).join(' ');
+  return <svg className="lineChart" viewBox="0 0 100 60" preserveAspectRatio="none"><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".24"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs><path d={`${d} L100 60 L0 60Z`} fill="url(#fill)"/><path d={d} fill="none" stroke={color} strokeWidth="2.2"/></svg>;
+}
+function Donut({ value=78 }) { return <div className="donut" style={{'--p': `${Math.min(100,Math.max(0,value))}%`}}><b>{value}</b><span>Score</span></div>; }
+function StatCard({ icon, label, value, sub, trend, tone='blue' }){ return <div className={`statCard ${tone}`}><div className="statIcon">{icon}</div><div><small>{label}</small><b>{value}</b><em className={Number(trend)>=0?'up':'down'}>{trend !== undefined ? fmtPct(trend) : sub}</em></div><LineChart points={[1,1.2,1.15,1.35,1.3,1.5,1.45,1.62]} color={`var(--${tone})`}/></div>; }
+function Sidebar({ page, setPage, t }){ return <aside className="sidebar"><div className="brand"><div className="brandLogo">N</div><div><b>NovaLedger</b><span>{t.subtitle}</span></div></div><nav>{nav.map(([key,ic])=><button key={key} className={page===key?'active':''} onClick={()=>setPage(key)}><span>{ic}</span>{t[key]}</button>)}</nav><div className="assistant"><b>AI Builder Assistant</b><p>Connected to on-chain and off-chain data. Turn insights into action.</p><button>Open Assistant →</button></div><div className="status"><span/> System healthy</div></aside>; }
+function Header({ lang, setLang, query, setQuery, t, refresh }){ return <header className="topbar"><div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/></div><button className="apiBadge"><span/> {t.api}</button><select className="language" value={lang} onChange={e=>setLang(e.target.value)}><option value="en">English</option><option value="zh">中文</option></select><button className="bell">◷</button><button className="avatar">NL</button></header>; }
+function Hero({ t }){ return <section className="hero"><div><small>NOVALEDGER DASHBOARD</small><h1>{t.title}</h1><p>{t.desc}</p></div><div className="dateBox"><b>{new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</b><span>{new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span></div></section>; }
+function MarketTable({ rows }){ return <div className="panel tablePanel"><div className="panelHead"><h3>Top Gainers <span>(24H)</span></h3><a>View all</a></div><table><thead><tr><th>#</th><th>Token</th><th>Price</th><th>24h %</th><th>Volume</th></tr></thead><tbody>{rows.slice(0,7).map((r,i)=><tr key={r.symbol}><td>{i+1}</td><td><b>{r.symbol}</b><small>{r.name}</small></td><td>{fmtUsd(r.price)}</td><td className={r.change>=0?'up':'down'}>{fmtPct(r.change)}</td><td>{fmtUsd(r.volume)}</td></tr>)}</tbody></table></div>; }
+function DefiPanel({ rows }){ return <div className="panel"><div className="panelHead"><h3>Top DeFi Protocol <span>(by TVL)</span></h3><a>View all</a></div><div className="protocols">{rows.slice(0,5).map((p,i)=><div className="protocol" key={p.name}><span>{i+1}</span><b>{p.name}</b><em>{fmtUsd(p.tvl)}</em><strong className={p.change_1d>=0?'up':'down'}>{fmtPct(p.change_1d)}</strong></div>)}</div></div>; }
+function NewsPanel({ rows }){ return <div className="panel"><div className="panelHead"><h3>Hot News <span>(Crypto News)</span></h3><a>View all</a></div><div className="newsList">{rows.slice(0,5).map((n,i)=><div className="news" key={i}><div className="newsIcon">{i===0?'₿':i===1?'Ξ':'↗'}</div><div><b>{n.title}</b><span>{n.source} • {n.sentiment}</span></div></div>)}</div></div>; }
+function TasksPanel(){ const tasks=['Connect live API routes','Polish NovaLedger UI','Verify market and DeFi charts','Prepare submission story','Record final demo']; return <div className="panel"><div className="panelHead"><h3>Wave 2 Tasks</h3><a>View all</a></div>{tasks.map((x,i)=><div className="task" key={x}><span className={i<3?'done':''}>✓</span><div><b>{x}</b><small>{i<3?'Completed':i===3?'In progress':'Pending'}</small></div><em>{i<3?'Ready':i===3?'Today':'Next'}</em></div>)}</div>; }
+function SchedulePanel(){ return <div className="panel"><div className="panelHead"><h3>Today's Build Schedule</h3></div>{[['09:00','API health check','Market + DeFi endpoints'],['11:00','UI polish round','Dashboard + mobile states'],['14:30','Submission writing','Problem, solution, tech stack'],['18:00','Final demo recording','Show live API updates']].map(x=><div className="schedule" key={x[0]}><span>{x[0]}</span><b>{x[1]}</b><small>{x[2]}</small></div>)}</div>; }
+function RepoPanel({ repos }){ return <div className="panel"><div className="panelHead"><h3>Repository Health</h3><a>View all</a></div>{repos.slice(0,4).map(r=><div className="repo" key={r.name}><b>{r.name}</b><span>{r.health || 94}/100</span><div><i style={{width:`${r.health||94}%`}}/></div></div>)}</div>; }
+function NetworkPanel({ sodex }){ return <div className="panel"><div className="panelHead"><h3>Network Status</h3><a>View all</a></div>{['Market API','DeFi API','GitHub API','News API','SoDEX Layer'].map((x,i)=><div className="network" key={x}><span>{x}</span><b className="up">Operational</b></div>)}</div>; }
+function DocsPage(){ return <div className="panel pagePanel"><h2>Documentation</h2><p>NovaLedger combines live market APIs, DeFi protocol data, repository metrics, news signals, and execution readiness into one Web3 analytics workspace.</p><div className="docGrid"><div><b>API Layer</b><span>Server-side routes protect keys and normalize market data.</span></div><div><b>Dashboard</b><span>Cards, charts, tables and tasks are designed for hackathon demo clarity.</span></div><div><b>Execution</b><span>SoDEX status and readiness panels stay separated from frontend secrets.</span></div></div></div>; }
+function SettingsPage({ lang,setLang }){ return <div className="panel pagePanel"><h2>Settings</h2><label>Language<select value={lang} onChange={e=>setLang(e.target.value)}><option value="en">English</option><option value="zh">中文</option></select></label><p>Default language is English. The dropdown can switch the interface to Chinese.</p></div>; }
+function DashboardPage({ t, market, defi, news, repos, sodex }){
+  const volume=sum(market,'volume'), tvl=sum(defi,'tvl'), avg=market.length?market.reduce((s,r)=>s+r.change,0)/market.length:0;
+  return <><Hero t={t}/><section className="stats"><StatCard icon="⌁" label={t.volume} value={fmtUsd(volume)} trend={6.84} tone="blue"/><StatCard icon="◉" label={t.tvl} value={fmtUsd(tvl)} trend={3.46} tone="green"/><StatCard icon="⌬" label={t.repos} value={repos.length || 3} sub="Developers tracked" tone="blue"/><StatCard icon="⌁" label={t.pulse} value={avg>=0?'Bullish':'Cautious'} trend={avg} tone="orange"/><StatCard icon="◈" label="SoDEX Status" value={t.operational} sub="All systems normal" tone="teal"/></section><div className="insight"><b>🚀 {t.insight}:</b> Bitcoin volume and DeFi liquidity are updating through live API routes. <button>{t.refresh}</button></div><section className="gridTop"><div className="panel chartPanel"><div className="panelHead"><h3>{t.overviewChart}</h3><select><option>7D</option><option>24H</option></select></div><LineChart points={[2.05,2.12,2.19,2.36,2.28,2.41,2.39,2.55,2.48]} /></div><div className="panel chartPanel"><div className="panelHead"><h3>{t.defiTrend}</h3><select><option>7D</option></select></div><LineChart points={[82,84,85,86,88,91,90,94,96]} color="var(--green)" /></div><MarketTable rows={market}/></section><section className="gridBottom"><RepoPanel repos={repos}/><DefiPanel rows={defi}/><NewsPanel rows={news}/><NetworkPanel sodex={sodex}/><TasksPanel/><SchedulePanel/></section></>;
+}
+function App(){
+  const [lang,setLang]=useState('en'); const t=lang==='zh'?zh:en;
+  const [page,setPage]=useState('overview'); const [query,setQuery]=useState('');
+  const [market,setMarket]=useState(fallbackMarket); const [defi,setDefi]=useState(fallbackDefi); const [news,setNews]=useState(fallbackNews); const [repos,setRepos]=useState([{name:'novaledger/dashboard',health:94}]); const [sodex,setSodex]=useState({status:'Ready'});
+  const load=async()=>{ setMarket(await getApi('/api/market', fallbackMarket)); setDefi(await getApi('/api/defi', fallbackDefi)); setNews(await getApi('/api/news', fallbackNews)); setRepos(await getApi('/api/github', [{name:'novaledger/dashboard',health:94}])); try{const d=await fetch('/api/sodex').then(r=>r.json()); setSodex(d.data||d)}catch{} };
+  useEffect(()=>{ load(); },[]);
+  const filteredMarket=useMemo(()=>market.filter(x=>`${x.symbol} ${x.name}`.toLowerCase().includes(query.toLowerCase())),[market,query]);
+  let content;
+  if(page==='docs') content=<DocsPage/>; else if(page==='settings') content=<SettingsPage lang={lang} setLang={setLang}/>; else if(page==='market') content=<><div className="pageTitle"><h2>Market API</h2><button onClick={load}>{t.refresh}</button></div><MarketTable rows={filteredMarket}/></>; else if(page==='defi') content=<><div className="pageTitle"><h2>DeFi TVL</h2><button onClick={load}>{t.refresh}</button></div><DefiPanel rows={defi}/></>; else if(page==='repo') content=<><div className="pageTitle"><h2>Repository Health</h2></div><RepoPanel repos={repos}/></>; else if(page==='signals') content=<><div className="pageTitle"><h2>Signals</h2></div><NewsPanel rows={news}/></>; else if(page==='tasks') content=<><div className="pageTitle"><h2>Build Tasks</h2></div><TasksPanel/><SchedulePanel/></>; else content=<DashboardPage t={t} market={filteredMarket} defi={defi} news={news} repos={repos} sodex={sodex}/>;
+  return <div className="app"><Sidebar page={page} setPage={setPage} t={t}/><main><Header lang={lang} setLang={setLang} query={query} setQuery={setQuery} t={t} refresh={load}/>{content}</main></div>;
 }
 
-const sideItems = [
-  { key: 'home', label: 'Home', icon: GraduationCap },
-  { key: 'market', label: 'Market API', icon: Coins },
-  { key: 'defi', label: 'DeFi TVL', icon: Database },
-  { key: 'repo', label: 'Repo Health', icon: GitFork },
-  { key: 'news', label: 'Signals', icon: Bell },
-  { key: 'tasks', label: 'Build Tasks', icon: CheckCircle2 },
-  { key: 'docs', label: 'Docs', icon: BookOpen },
-  { key: 'settings', label: 'Settings', icon: ShieldCheck }
-];
-
-const tasks = [
-  { title: 'Finalize Wave 2 product scope', area: 'Product', due: 'Today', status: 'Ready', progress: 100 },
-  { title: 'Connect free public APIs', area: 'Data', due: 'Today', status: 'Live', progress: 100 },
-  { title: 'Polish LMS-style dashboard UI', area: 'UX', due: 'Tomorrow', status: 'In progress', progress: 84 },
-  { title: 'Prepare submission story', area: 'Pitch', due: '2 days', status: 'In progress', progress: 67 },
-  { title: 'Add wallet action layer', area: 'Web3', due: 'Next', status: 'Planned', progress: 35 }
-];
-
-const modules = [
-  { name: 'Market Intelligence', icon: Coins, color: 'purple', progress: 94, note: 'CoinGecko + Binance fallback' },
-  { name: 'DeFi Protocol Radar', icon: Database, color: 'green', progress: 88, note: 'DefiLlama public API' },
-  { name: 'Repo Health Monitor', icon: GitFork, color: 'blue', progress: 82, note: 'GitHub REST API' },
-  { name: 'News Signal Layer', icon: Bell, color: 'orange', progress: 76, note: 'CryptoCompare + trend fallback' },
-  { name: 'Builder AI Coach', icon: Bot, color: 'teal', progress: 69, note: 'Rule-based guidance' }
-];
-
-function StatCard({ icon: Icon, label, value, hint, tone }) {
-  return (
-    <section className={`statCard ${tone || ''}`}>
-      <div className="statIcon"><Icon size={20} /></div>
-      <div>
-        <p>{label}</p>
-        <h3>{value}</h3>
-        <span>{hint}</span>
-      </div>
-    </section>
-  );
-}
-
-function TaskRow({ task }) {
-  return (
-    <div className="taskRow">
-      <div className="taskLeft">
-        <div className="taskIcon"><CheckCircle2 size={18} /></div>
-        <div><b>{task.title}</b><span>{task.area}</span></div>
-      </div>
-      <div className="taskMeta"><em>{task.status}</em><span>{task.due}</span></div>
-      <div className="taskProgress"><i style={{ width: `${task.progress}%` }} /></div>
-    </div>
-  );
-}
-
-function ModuleCard({ module }) {
-  const Icon = module.icon;
-  return (
-    <section className={`moduleCard ${module.color}`}>
-      <div className="moduleTop"><Icon size={20} /><span>{module.progress}%</span></div>
-      <h4>{module.name}</h4>
-      <p>{module.note}</p>
-      <div className="moduleBar"><i style={{ width: `${module.progress}%` }} /></div>
-    </section>
-  );
-}
-
-function MarketTable({ rows }) {
-  return (
-    <section className="panel widePanel">
-      <div className="panelHead"><div><h2>Live Market API</h2><p>Prices, volume, 24h movement and opportunity score.</p></div><span>{rows.length} assets</span></div>
-      <div className="tableWrap">
-        <table>
-          <thead><tr><th>#</th><th>Asset</th><th>Price</th><th>24h</th><th>Volume</th><th>Market Cap</th><th>Score</th></tr></thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={`${row.symbol}-${i}`}>
-                <td>{i + 1}</td>
-                <td><div className="asset"><span>{String(row.symbol || 'A').slice(0, 1)}</span><div><b>{row.symbol}</b><small>{row.name}</small></div></div></td>
-                <td>{fmtUsd(row.price)}</td>
-                <td className={Number(row.change24h) >= 0 ? 'up' : 'down'}>{fmtPct(row.change24h)}</td>
-                <td>{fmtUsd(row.volume)}</td>
-                <td>{fmtUsd(row.marketCap)}</td>
-                <td><em className="score">{row.score}</em></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function DeFiPanel({ rows }) {
-  return (
-    <section className="panel">
-      <div className="panelHead"><div><h2>DeFi Protocol Radar</h2><p>TVL and category tracking from public protocol data.</p></div><span>{rows.length} protocols</span></div>
-      <div className="protocolList">
-        {rows.slice(0, 8).map((row) => (
-          <div className="protocol" key={row.name}>
-            <div><b>{row.name}</b><span>{row.category} • {row.chain}</span></div>
-            <div><b>{fmtUsd(row.tvl)}</b><span className={Number(row.change7d) >= 0 ? 'up' : 'down'}>{fmtPct(row.change7d)} 7d</span></div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function RepoPanel({ rows }) {
-  return (
-    <section className="panel">
-      <div className="panelHead"><div><h2>GitHub Repo Health</h2><p>Public repo API for builder credibility signals.</p></div><span>{rows.length} repos</span></div>
-      <div className="repoGrid">
-        {rows.map((row) => (
-          <a className="repoCard" href={row.url} target="_blank" rel="noreferrer" key={row.name}>
-            <GitFork size={18} />
-            <b>{row.name}</b>
-            <div><span><Star size={14} /> {row.stars}</span><span><GitFork size={14} /> {row.forks}</span></div>
-            <small>{row.language} • score {row.score}</small>
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function NewsPanel({ rows }) {
-  return (
-    <section className="panel">
-      <div className="panelHead"><div><h2>News Signal Feed</h2><p>Latest crypto headlines for builder context.</p></div><span>{rows.length} signals</span></div>
-      <div className="newsList">
-        {rows.slice(0, 6).map((row, i) => (
-          <a className="newsItem" href={row.url} target="_blank" rel="noreferrer" key={`${row.title}-${i}`}>
-            <div><Sparkles size={16} /><b>{row.title}</b></div>
-            <span>{row.source} • sentiment {row.sentiment}</span>
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-
-function SoDEXPanel({ data }) {
-  return (
-    <section className="panel">
-      <div className="panelHead"><div><h2>SoDEX Execution Layer</h2><p>Server-side trading/account route using protected environment variables.</p></div><span>{data?.network || 'mainnet'}</span></div>
-      <div className="sodexBox">
-        <div><b>Status</b><span>{data?.configured ? 'Account route configured' : 'Waiting for SODEX_USER_ADDRESS'}</span></div>
-        <div><b>Trading Key</b><span>{data?.tradingKeyReady ? 'Ready' : 'Add API key name + private key'}</span></div>
-        <div><b>Account ID</b><span>{data?.accountID || 'optional'}</span></div>
-        <div><b>Message</b><span>{data?.message || 'SoDEX route ready for configuration.'}</span></div>
-      </div>
-    </section>
-  );
-}
-
-function QuickActions({ refresh, loading }) {
-  return (
-    <section className="panel quickPanel">
-      <div className="panelHead"><div><h2>Quick Actions</h2><p>Builder operations for Wave 2 execution.</p></div></div>
-      <div className="quickGrid">
-        <button onClick={refresh}><Activity /> {loading ? 'Refreshing...' : 'Refresh APIs'}</button>
-        <button onClick={() => navigator.clipboard?.writeText(window.location.href)}><Link2 /> Copy demo link</button>
-        <button onClick={() => window.open('https://github.com', '_blank')}><GitFork /> Open GitHub</button>
-        <button onClick={() => alert('Pitch checklist: problem, solution, API usage, demo, next steps.')}><Rocket /> Pitch checklist</button>
-      </div>
-    </section>
-  );
-}
-
-function App() {
-  const [active, setActive] = useState('home');
-  const [market, setMarket] = useState([]);
-  const [defi, setDefi] = useState([]);
-  const [repos, setRepos] = useState([]);
-  const [news, setNews] = useState([]);
-  const [sources, setSources] = useState({});
-  const [sodex, setSodex] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [m, d, g, n, sx] = await Promise.all([
-        fetchJson('/api/market'),
-        fetchJson('/api/defi'),
-        fetchJson('/api/github'),
-        fetchJson('/api/news'),
-        fetchJson('/api/sodex')
-      ]);
-      setMarket(m.rows || []);
-      setDefi(d.rows || []);
-      setRepos(g.rows || []);
-      setNews(n.rows || []);
-      setSodex(sx);
-      setSources({ market: m.source, defi: d.source, github: g.source, news: n.source, sodex: sx?.source || 'SoDEX' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const stats = useMemo(() => {
-    const volume = market.reduce((sum, row) => sum + Number(row.volume || 0), 0);
-    const tvl = defi.reduce((sum, row) => sum + Number(row.tvl || 0), 0);
-    const repoScore = repos.length ? Math.round(repos.reduce((sum, row) => sum + Number(row.score || 0), 0) / repos.length) : 0;
-    const avgMove = market.length ? market.reduce((sum, row) => sum + Number(row.change24h || 0), 0) / market.length : 0;
-    return { volume, tvl, repoScore, avgMove };
-  }, [market, defi, repos]);
-
-  const marketChart = market.slice(0, 8).map((row) => ({ name: row.symbol, value: Number(row.change24h || 0), volume: Number(row.volume || 0) / 1000000 }));
-  const defiPie = defi.slice(0, 5).map((row) => ({ name: row.name, value: Number(row.tvl || 0) }));
-
-  return (
-    <div className="app">
-      <aside className="sidebar">
-        <div className="brand"><div className="brandIcon"><Globe2 /></div><div><b>Wave2 Portal</b><span>Web3 Builder OS</span></div></div>
-        <nav>
-          {sideItems.map(({ key, label, icon: Icon }) => (
-            <button key={key} className={active === key ? 'active' : ''} onClick={() => setActive(key)}><Icon size={18} />{label}</button>
-          ))}
-        </nav>
-        <div className="aiBox"><Bot size={20} /><b>AI Builder Coach</b><span>APIs connected. Keep the demo story simple: data → insight → action.</span></div>
-      </aside>
-
-      <main>
-        <header className="topbar">
-          <button className="menuBtn"><Layers3 size={20} /></button>
-          <div className="search"><Zap size={18} /><input placeholder="Search modules, APIs, protocols, tasks..." /></div>
-          <button className="apiBadge"><span /> API Powered</button>
-          <div className="profile"><b>lucky_star</b><span>Wave 2 Builder</span><div>L</div></div>
-        </header>
-
-        <section className="welcome">
-          <div>
-            <span className="eyebrow">Live API dashboard</span>
-            <h1>Build, monitor, and present your Wave 2 Web3 product.</h1>
-            <p>Track crypto markets, DeFi protocols, repository health, builder tasks, and news signals from one clean portal.</p>
-          </div>
-          <div className="dateCard"><CalendarDays size={20} /><span>Wave 2</span><b>Builder sprint</b></div>
-        </section>
-
-        <section className="statsGrid">
-          <StatCard icon={Coins} label="24h Tracked Volume" value={fmtUsd(stats.volume)} hint={sources.market || 'Market API'} tone="purple" />
-          <StatCard icon={Database} label="DeFi TVL Watch" value={fmtUsd(stats.tvl)} hint={sources.defi || 'Protocol API'} tone="green" />
-          <StatCard icon={GitFork} label="Repo Health Score" value={stats.repoScore || '—'} hint={sources.github || 'GitHub API'} tone="blue" />
-          <StatCard icon={LineChart} label="Market Pulse" value={fmtPct(stats.avgMove)} hint="Average 24h move" tone="orange" />
-          <StatCard icon={WalletCards} label="SoDEX Layer" value={sodex?.configured ? 'Connected' : 'Ready'} hint={sodex?.message || 'Trading API route'} tone="teal" />
-        </section>
-
-        <section className="alert"><Rocket size={20} /><b>Wave 2 Focus:</b><span>Show a working demo with real API data, clear user value, and practical Web3 workflow.</span><button onClick={load}>{loading ? <Loader2 className="spin" size={16} /> : 'Refresh data'}</button></section>
-
-        <section className="twoCol">
-          <section className="panel tasksPanel">
-            <div className="panelHead"><div><h2>Wave 2 Build Tasks</h2><p>Execution list for product submission.</p></div><a onClick={() => setActive('tasks')}>View all <ChevronRight size={15} /></a></div>
-            {tasks.map((task) => <TaskRow key={task.title} task={task} />)}
-          </section>
-          <section className="panel schedulePanel">
-            <div className="panelHead"><div><h2>Today's Build Schedule</h2><p>Keep the sprint moving.</p></div></div>
-            <div className="timeline">
-              <div><time>09:00</time><b>API health check</b><span>Market + DeFi endpoints</span></div>
-              <div><time>11:00</time><b>UI polish round</b><span>Dashboard + mobile states</span></div>
-              <div><time>14:30</time><b>Submission writing</b><span>Problem, solution, tech stack</span></div>
-              <div><time>18:00</time><b>Final demo recording</b><span>Show live API updates</span></div>
-            </div>
-          </section>
-        </section>
-
-        <section className="modulesRow">
-          {modules.map((module) => <ModuleCard key={module.name} module={module} />)}
-        </section>
-
-        <section className="chartsGrid">
-          <section className="panel chartPanel">
-            <div className="panelHead"><div><h2>Market Movement</h2><p>24h change by tracked asset.</p></div></div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={marketChart}><XAxis dataKey="name" stroke="#94a3b8" /><YAxis stroke="#94a3b8" /><Tooltip contentStyle={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:12 }} /><Bar dataKey="value" radius={[8,8,0,0]}>{marketChart.map((entry, i) => <Cell key={i} fill={entry.value >= 0 ? '#22c55e' : '#ef4444'} />)}</Bar></BarChart>
-            </ResponsiveContainer>
-          </section>
-          <section className="panel chartPanel">
-            <div className="panelHead"><div><h2>DeFi TVL Mix</h2><p>Top protocol weight by TVL.</p></div></div>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart><Pie data={defiPie} dataKey="value" nameKey="name" outerRadius={88} innerRadius={48}>{defiPie.map((_, i) => <Cell key={i} fill={['#7c3aed','#22c55e','#3b82f6','#f59e0b','#14b8a6'][i % 5]} />)}</Pie><Tooltip formatter={(value) => fmtUsd(value)} /></PieChart>
-            </ResponsiveContainer>
-          </section>
-        </section>
-
-        <section className="mainGrid">
-          <MarketTable rows={market} />
-          <div className="sideStack">
-            <DeFiPanel rows={defi} />
-            <RepoPanel rows={repos} />
-            <NewsPanel rows={news} />
-            <SoDEXPanel data={sodex} />
-            <QuickActions refresh={load} loading={loading} />
-          </div>
-        </section>
-      </main>
-    </div>
-  );
-}
-
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(<App/>);

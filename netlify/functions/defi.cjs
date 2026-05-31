@@ -1,0 +1,2 @@
+const { ok, getJson, fallbackDefi } = require('./_common.cjs');
+exports.handler = async function(){ try{const d=await getJson('https://api.llama.fi/protocols'); return ok({source:'defillama',data:(d||[]).sort((a,b)=>(b.tvl||0)-(a.tvl||0)).slice(0,8).map(p=>({name:p.name,category:p.category||'DeFi',tvl:p.tvl||0,change_1d:p.change_1d||0}))});}catch(e){return ok({source:'resilience',data:fallbackDefi});} }
