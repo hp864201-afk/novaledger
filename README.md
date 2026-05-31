@@ -1,6 +1,6 @@
 # NovaLedger
 
-NovaLedger is a Wave 2 Web3 analytics and finance dashboard with English default UI and a Chinese language dropdown.
+NovaLedger is a Web3 analytics and finance dashboard with English default UI and a Chinese language dropdown.
 
 ## Features
 
